@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTL Site Activity — Rollout Log</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0C1420;
+    --bg-2: #121D2B;
+    --ink: #E8EDF4;
+    --ink-soft: #7E90A8;
+    --line: rgba(232,237,244,0.09);
+    --line-strong: rgba(232,237,244,0.18);
+    --amber: #F0A857;
+    --amber-soft: rgba(240,168,87,0.15);
+    --teal: #3AD8BC;
+    --teal-soft: rgba(58,216,188,0.14);
+    --red: #F1746A;
+    --red-soft: rgba(241,116,106,0.15);
+    --blue: #62A8E8;
+    --blue-soft: rgba(98,168,232,0.15);
+    --violet: #A48CF2;
+    --violet-soft: rgba(164,140,242,0.15);
+    --card: #131D2C;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(232,237,244,0.03);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 15% 8%, rgba(58,216,188,0.08), transparent 45%),
+      radial-gradient(ellipse at 85% 85%, rgba(98,168,232,0.08), transparent 45%),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 140%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cg fill='none' stroke='%233AD8BC' stroke-width='0.6' opacity='0.13'%3E%3Cline x1='20' y1='30' x2='72' y2='62'/%3E%3Cline x1='72' y1='62' x2='132' y2='42'/%3E%3Cline x1='132' y1='42' x2='192' y2='92'/%3E%3Cline x1='38' y1='142' x2='100' y2='172'/%3E%3Cline x1='100' y1='172' x2='162' y2='150'/%3E%3Cline x1='162' y1='150' x2='212' y2='192'/%3E%3Cline x1='20' y1='30' x2='38' y2='142'/%3E%3Cline x1='132' y1='42' x2='162' y2='150'/%3E%3Cline x1='72' y1='62' x2='100' y2='172'/%3E%3C/g%3E%3Cg fill='%233AD8BC' opacity='0.4'%3E%3Ccircle cx='20' cy='30' r='1.7'/%3E%3Ccircle cx='72' cy='62' r='1.7'/%3E%3Ccircle cx='132' cy='42' r='1.7'/%3E%3Ccircle cx='192' cy='92' r='1.7'/%3E%3Ccircle cx='38' cy='142' r='1.7'/%3E%3Ccircle cx='100' cy='172' r='1.7'/%3E%3Ccircle cx='162' cy='150' r='1.7'/%3E%3Ccircle cx='212' cy='192' r='1.7'/%3E%3C/g%3E%3C/svg%3E"),
+      var(--bg);
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat, no-repeat;
+    background-size: auto, auto, auto, 240px 240px, auto;
+    background-position: 15% 8%, 85% 85%, 50% 50%, 0 0, 0 0;
+    animation: bgdrift 34s ease-in-out infinite;
+    color:var(--ink);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  @keyframes bgdrift{
+    0%,100%{ background-position: 15% 8%, 85% 85%, 50% 50%, 0 0, 0 0; }
+    50%{ background-position: 19% 12%, 81% 81%, 50% 50%, 0 0, 0 0; }
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk', sans-serif;}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 24px 60px;}
+
+  /* ---------- live pulse indicator ---------- */
+  .live-dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:var(--teal);margin-right:6px;position:relative;top:-1px;
+    box-shadow:0 0 0 0 rgba(58,216,188,0.55);
+    animation:livepulse 2.2s ease-out infinite;
+  }
+  @keyframes livepulse{
+    0%{box-shadow:0 0 0 0 rgba(58,216,188,0.55);}
+    70%{box-shadow:0 0 0 7px rgba(58,216,188,0);}
+    100%{box-shadow:0 0 0 0 rgba(58,216,188,0);}
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--line-strong);
+    padding-bottom:16px;margin-bottom:20px;
+    gap:16px;flex-wrap:wrap;
+  }
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand .mark{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;
+    letter-spacing:0.04em;background:var(--teal);color:#08150F;
+    padding:4px 9px;border-radius:2px;
+  }
+  header h1{font-size:26px;font-weight:700;margin:2px 0 2px;letter-spacing:-0.01em;color:var(--ink);}
+  header .sub{color:var(--ink-soft);font-size:12.5px;}
+  .headmeta{text-align:right;font-size:12px;color:var(--ink-soft);}
+  .headmeta b{color:var(--ink);font-family:'Space Grotesk',sans-serif;font-size:20px;display:block;font-weight:600;}
+  .uploadbtn{
+    display:inline-block;margin-top:8px;background:var(--teal);color:#08150F;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;
+    padding:6px 11px;border-radius:2px;cursor:pointer;letter-spacing:.02em;
+    border:1px solid transparent;
+  }
+  .uploadbtn:hover{background:#4FE6CB;}
+
+  /* ---------- KPI strip ---------- */
+  .kpis{
+    display:grid;grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:10px;margin-bottom:20px;
+  }
+  .kpi{
+    background:var(--card);border:1px solid var(--line-strong);border-radius:4px;
+    padding:12px 14px;position:relative;overflow:hidden;box-shadow:var(--shadow);
+  }
+  .kpi::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:var(--bar,var(--ink));box-shadow:0 0 10px 0 var(--bar,transparent);
+  }
+  .kpi .lbl{font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+  .kpi .val{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:26px;line-height:1;color:var(--ink);}
+  .kpi.k-total .val{font-size:21px;}
+  .kpi .sub{font-size:11px;color:var(--ink-soft);margin-top:5px;}
+  .kpi.k-total{--bar:var(--blue);}
+  .kpi.k-install{--bar:var(--blue);}
+  .kpi.k-installpending{--bar:var(--amber);}
+  .kpi.k-active{--bar:var(--teal);}
+  .kpi.k-activepending{--bar:var(--amber);}
+  .kpi.k-pat{--bar:var(--amber);}
+  .kpi.k-patreq{--bar:var(--blue);}
+  .kpi.k-asset{--bar:var(--violet);}
+  .kpi.k-assettotal{--bar:#5BC7A8;}
+  .kpi.k-issue{--bar:var(--red);}
+  .kpi.k-physicalpat{--bar:#E092C9;}
+  .kpi.k-remotepat{--bar:#6FC4D9;}
+
+  /* ---------- filter bar ---------- */
+  .filterbar{
+    position:sticky;top:0;z-index:20;
+    background:var(--bg-2);border:1px solid var(--line-strong);border-radius:4px;
+    padding:12px 14px;margin-bottom:20px;
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    backdrop-filter:blur(6px);
+  }
+  .filterbar .grp{display:flex;flex-direction:column;gap:3px;}
+  .filterbar label{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;}
+  .filterbar select, .filterbar input[type=text]{
+    font-family:'IBM Plex Mono',monospace;font-size:12.5px;
+    background:#0A121D;border:1px solid var(--line-strong);border-radius:2px;
+    padding:6px 8px;color:var(--ink);width:150px;
+    overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  }
+  .filterbar input[type=text]{width:190px;}
+  .filterbar input[type=text]::placeholder{color:var(--ink-soft);}
+  .filterbar select:focus, .filterbar input:focus{outline:2px solid var(--blue);outline-offset:1px;}
+  .resetbtn{
+    margin-left:auto;background:var(--bg);color:var(--ink);border:1px solid var(--line-strong);
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+    padding:8px 14px;border-radius:2px;cursor:pointer;letter-spacing:.02em;
+    align-self:flex-end;
+  }
+  .resetbtn:hover{border-color:var(--blue);color:var(--blue);}
+  .count-tag{font-size:11.5px;color:var(--ink-soft);align-self:flex-end;padding:8px 0;}
+  .count-tag b{color:var(--ink);}
+
+  /* ---------- charts ---------- */
+  .charts{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;margin-bottom:22px;}
+  .panel{
+    background:var(--card);border:1px solid var(--line-strong);border-radius:4px;
+    padding:14px 16px 8px;box-shadow:var(--shadow);
+  }
+  .panel h3{font-size:13px;margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:center;color:var(--ink);}
+  .panel h3 span{font-size:10.5px;color:var(--ink-soft);font-weight:400;font-family:'IBM Plex Mono',monospace;}
+  .chart-box{position:relative;height:220px;}
+  .donutrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  /* ---------- table ---------- */
+  .tablewrap{
+    background:var(--card);border:1px solid var(--line-strong);border-radius:4px;
+    overflow:hidden;box-shadow:var(--shadow);
+  }
+  .tablewrap h3{padding:14px 16px 0;margin:0;font-size:13px;font-weight:600;color:var(--ink);}
+  .scrollarea{overflow:auto;max-height:560px;margin-top:10px;}
+  table{border-collapse:collapse;width:100%;font-size:12px;}
+  thead th{
+    position:sticky;top:0;background:var(--bg-2);text-align:left;
+    padding:8px 10px;border-bottom:1px solid var(--line-strong);cursor:pointer;
+    white-space:nowrap;font-weight:600;user-select:none;color:var(--ink);
+  }
+  thead th:hover{color:var(--blue);}
+  thead th.sort-active{color:var(--blue);}
+  thead th .arrow{font-size:9px;margin-left:3px;color:var(--ink-soft);}
+  tbody td{padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink);}
+  tbody tr:hover{background:var(--bg-2);}
+  .badge{
+    display:inline-block;padding:2px 7px;border-radius:9px;font-size:10.5px;font-weight:600;
+  }
+  .b-done{background:var(--teal-soft);color:var(--teal);}
+  .b-pending{background:var(--amber-soft);color:var(--amber);}
+  .b-rejected,.b-notdone{background:var(--red-soft);color:var(--red);}
+  .b-na,.b-unknown{background:rgba(126,144,168,0.14);color:var(--ink-soft);}
+  .b-discarded{background:rgba(126,144,168,0.14);color:var(--ink-soft);text-decoration:line-through;}
+  .b-other{background:var(--blue-soft);color:var(--blue);}
+  .remark-flag{color:var(--red);font-weight:700;}
+  /* Cell editing is currently turned off — no hover/pointer affordance. */
+  .editable-cell input, .editable-cell select{
+    width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    padding:3px 5px;border:1px solid var(--blue);border-radius:2px;box-sizing:border-box;
+    background:#0A121D;color:var(--ink);
+  }
+  .edit-saved-flash{outline:2px solid var(--teal) !important;outline-offset:-2px;}
+  .edit-partial-flash{outline:2px solid var(--amber) !important;outline-offset:-2px;}
+  .edit-error-flash{outline:2px solid var(--red) !important;outline-offset:-2px;}
+
+  .pager{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:12px;color:var(--ink-soft);}
+  .pager button{
+    background:var(--bg-2);color:var(--ink);border:1px solid var(--line-strong);border-radius:2px;padding:5px 10px;
+    font-family:'IBM Plex Mono',monospace;cursor:pointer;
+  }
+  .pager button:disabled{opacity:.4;cursor:not-allowed;}
+
+  footer{margin-top:18px;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line);padding-top:12px;}
+
+  @media (max-width:980px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .charts{grid-template-columns:1fr;}
+    .donutrow{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand"><span class="mark">BTL</span><span style="color:var(--ink-soft);font-size:11px;">rollout ops</span></div>
+      <h1>Site Activity &amp; Pending Update Log</h1>
+      <div class="sub">Installation → Activation → PAT tracker, built from the uploaded activity sheet</div>
+    </div>
+    <div class="headmeta">
+      <b id="totalCount">–</b>
+      records loaded
+      <div style="margin-top:4px;font-size:10.5px;"><span class="live-dot"></span><span id="sourceLabel">loading…</span></div>
+      <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+        <span id="adminControls" style="display:none;gap:8px;">
+          <button type="button" id="uploadBtn" class="uploadbtn">⭯ Upload updated sheet</button>
+          <button type="button" id="syncSettingsBtn" class="uploadbtn" style="background:transparent;color:var(--ink);border:1px solid var(--line-strong);">⛓ Google Sheet sync</button>
+        </span>
+        <span id="viewOnlyBadge" style="display:none;align-self:center;font-size:10.5px;color:var(--ink-soft);border:1px solid var(--line-strong);border-radius:9px;padding:3px 9px;">view only</span>
+        <button type="button" id="logoutBtn" class="uploadbtn" style="background:transparent;color:var(--ink);border:1px solid var(--line-strong);">Sign out (<span id="whoami"></span>)</button>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+      <div id="uploadStatus" style="margin-top:5px;font-size:10.5px;min-height:14px;"></div>
+      <div id="syncPanel" style="display:none;margin-top:10px;text-align:left;background:var(--bg-2);border:1px solid var(--line-strong);border-radius:3px;padding:12px;width:340px;">
+        <label style="display:block;font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Google Sheet link (share as "Anyone with the link — Viewer")</label>
+        <input type="text" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/…/edit" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 8px;border:1px solid var(--line-strong);border-radius:2px;margin-bottom:8px;box-sizing:border-box;background:#0A121D;color:var(--ink);">
+        <label style="display:block;font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Check for updates every (minutes)</label>
+        <input type="number" id="syncIntervalInput" min="1" value="15" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:7px 8px;border:1px solid var(--line-strong);border-radius:2px;margin-bottom:10px;box-sizing:border-box;background:#0A121D;color:var(--ink);">
+        <label style="display:block;font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Column letter overrides — for columns with a blank/wrong header (optional)</label>
+        <textarea id="overridesInput" rows="3" placeholder="Asset Approval Request Date = AH&#10;Asset File Approval Date = AI" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:7px 8px;border:1px solid var(--line-strong);border-radius:2px;margin-bottom:10px;box-sizing:border-box;resize:vertical;background:#0A121D;color:var(--ink);"></textarea>
+        <div style="display:flex;gap:8px;">
+          <button type="button" id="saveSyncBtn" class="uploadbtn" style="flex:1;">Save &amp; sync now</button>
+          <button type="button" id="syncNowBtn" class="uploadbtn" style="background:transparent;color:var(--ink);border:1px solid var(--line-strong);">Sync now</button>
+        </div>
+        <div id="syncStatusMsg" style="margin-top:8px;font-size:10.5px;min-height:14px;"></div>
+        <div id="overrideDiag" style="margin-top:6px;font-size:10px;color:var(--ink-soft);line-height:1.6;"></div>
+
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line-strong);">
+          <label style="display:block;font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Write edits back to this Google Sheet (optional)</label>
+          <div id="serviceAccountStatus" style="font-size:10.5px;color:var(--ink-soft);margin-bottom:8px;">Checking…</div>
+          <textarea id="serviceAccountInput" rows="3" placeholder="Paste the full service-account JSON key here" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:7px 8px;border:1px solid var(--line-strong);border-radius:2px;margin-bottom:8px;box-sizing:border-box;resize:vertical;background:#0A121D;color:var(--ink);"></textarea>
+          <button type="button" id="saveServiceAccountBtn" class="uploadbtn" style="width:100%;margin-bottom:8px;">Save credentials</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:8px;cursor:pointer;">
+            <input type="checkbox" id="writebackToggle"> Enable writing edits back to the sheet
+          </label>
+          <button type="button" id="testWritebackBtn" class="uploadbtn" style="width:100%;background:transparent;color:var(--ink);border:1px solid var(--line-strong);">Test connection</button>
+          <div id="writebackStatusMsg" style="margin-top:8px;font-size:10.5px;min-height:14px;"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpiRow"></div>
+
+  <div class="filterbar">
+    <div class="grp">
+      <label>Search site / cell</label>
+      <input type="text" id="fSearch" placeholder="e.g. DHBUU2">
+    </div>
+    <div class="grp">
+      <label>District</label>
+      <select id="fDistrict"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Site type (ISS/OB)</label>
+      <select id="fSiteType"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Project type</label>
+      <select id="fProject"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Work type</label>
+      <select id="fWorkType"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Installation status</label>
+      <select id="fInstall"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Active status</label>
+      <select id="fActive"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>Asset approval</label>
+      <select id="fAssetApproval"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>PAT status</label>
+      <select id="fPat"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>PAT type</label>
+      <select id="fPatType"><option value="">All</option></select>
+    </div>
+    <div class="grp">
+      <label>TL / concern</label>
+      <select id="fTL"><option value="">All</option></select>
+    </div>
+    <div class="count-tag"><b id="filteredCount">–</b> matching rows</div>
+    <button class="resetbtn" id="exportBtn" style="background:var(--teal);">⭳ Export to Excel</button>
+    <span id="exportStatus" style="font-size:11px;color:var(--red);align-self:flex-end;padding:8px 0;"></span>
+    <button class="resetbtn" id="resetBtn">Reset filters</button>
+  </div>
+
+  <div class="charts">
+    <div class="panel">
+      <h3>Sites by district <span>count, filtered</span></h3>
+      <div class="chart-box"><canvas id="chartDistrict"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Top project types <span>count, filtered</span></h3>
+      <div class="chart-box"><canvas id="chartProject"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Installation status</h3>
+      <div class="chart-box"><canvas id="chartInstall"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>Active status</h3>
+      <div class="chart-box"><canvas id="chartActive"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>PAT status</h3>
+      <div class="chart-box"><canvas id="chartPat"></canvas></div>
+    </div>
+    <div class="panel">
+      <h3>PAT type <span>Physical / Remote</span></h3>
+      <div class="chart-box"><canvas id="chartPatType"></canvas></div>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <h3>Site log <span id="rowRangeLabel" style="font-weight:400;color:var(--ink-soft);font-size:11px;"></span></h3>
+    <div class="scrollarea">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th data-key="Site name">Site</th>
+            <th data-key="Cell Name">Cell</th>
+            <th data-key="District">Dist.</th>
+            <th data-key="Site Type (ISS/OB)">ISS/OB</th>
+            <th data-key="ISS Site Code">ISS code</th>
+            <th data-key="Project Type">Project type</th>
+            <th data-key="Work Type">Work type</th>
+            <th data-key="Installation Status">Install</th>
+            <th data-key="Active Status">Active</th>
+            <th data-key="_assetApproval">Asset appr.</th>
+            <th data-key="Asset Approval Request Date">Asset appr. req.</th>
+            <th data-key="Asset File Approval Date">Asset file appr.</th>
+            <th data-key="PAT Status">PAT</th>
+            <th data-key="PAT Type">PAT type</th>
+            <th data-key="TL Name">TL / concern</th>
+            <th data-key="Actual Active Date">Active date</th>
+            <th data-key="Remarks/Issues">Remarks</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button id="prevPage">‹ Prev</button>
+      <span id="pageLabel">Page 1</span>
+      <button id="nextPage">Next ›</button>
+      <span style="margin-left:auto;">100 rows / page</span>
+    </div>
+  </div>
+
+  <footer id="footNote"></footer>
+</div>
+
+<script>
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.color = '#7E90A8';
+  Chart.defaults.borderColor = 'rgba(232,237,244,0.08)';
+}
+
+let RAW = [];
+
+// ---------- status normalization ----------
+function normStatus(v){
+  if(v===undefined||v===null) return 'Unknown';
+  const t = String(v).trim();
+  if(t==='') return 'Unknown';
+  const s = t.toLowerCase();
+  if(s==='done'||s==='completed') return 'Done';
+  if(s==='pending') return 'Pending';
+  if(s==='discarded') return 'Discarded';
+  if(s==='not done') return 'Not Done';
+  if(s==='na'||s==='n/a') return 'NA';
+  if(s==='accepted') return 'Accepted';
+  if(s==='conditionally accepted') return 'Conditionally Accepted';
+  if(s==='rejected') return 'Rejected';
+  if(s==='no need pat for card dismantle') return 'No PAT Needed';
+  // looks like a date got typed into a status column (data entry issue)
+  if(/^\d{1,2}[-\/][a-z0-9]{2,4}[-\/]\d{2,4}$/i.test(t)) return 'Date entered (check row)';
+  return t;
+}
+function badgeClass(norm){
+  const s = norm.toLowerCase();
+  if(s==='done'||s==='accepted'||s==='approved') return 'b-done';
+  if(s==='pending') return 'b-pending';
+  if(s==='rejected') return 'b-rejected';
+  if(s==='not done') return 'b-notdone';
+  if(s==='na'||s==='unknown'||s==='no pat needed'||s==='not active yet') return 'b-na';
+  if(s==='discarded') return 'b-discarded';
+  return 'b-other';
+}
+
+let dqIssues = 0;
+let patDateDiagnostic = '';
+
+// ---------- populate filter dropdowns ----------
+function uniqueSorted(field){
+  const set = new Set();
+  RAW.forEach(r=>{ const v=(r[field]||'').trim(); if(v) set.add(v); });
+  return Array.from(set).sort();
+}
+function fillSelect(id, values){
+  const el = document.getElementById(id);
+  el.innerHTML = '<option value="">All</option>';
+  values.forEach(v=>{
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    el.appendChild(o);
+  });
+}
+
+const filterIds = ['fDistrict','fSiteType','fProject','fWorkType','fInstall','fActive','fPat','fPatType','fAssetApproval','fTL'];
+let sortKey = null, sortDir = 1, page = 0;
+const PAGE_SIZE = 100;
+
+const MONTH_NAMES = ['jan','feb','mar','apr','may','jun','jul','aug','sep','sept','oct','nov','dec',
+  'january','february','march','april','june','july','august','september','october','november','december'];
+
+function looksLikeDate(v){
+  const s = (v||'').trim();
+  if(!s) return false;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s)) return true; // normalized YYYY-MM-DD
+  if(/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(s)) return true; // 16/4/26, 16-4-2026, etc
+  const m1 = s.match(/^\d{1,2}[-\/]([A-Za-z]+)[-\/]\d{2,4}$/); // 16-April-26, 16-Apr-26
+  if(m1 && MONTH_NAMES.includes(m1[1].toLowerCase())) return true;
+  // "May 3, 2026" / "May 3 2026"
+  const m2 = s.match(/^([A-Za-z]+)\s+\d{1,2},?\s+\d{2,4}$/);
+  if(m2 && MONTH_NAMES.includes(m2[1].toLowerCase())) return true;
+  // "3 May 2026" / "3 May, 2026"
+  const m3 = s.match(/^\d{1,2}\s+([A-Za-z]+),?\s+\d{2,4}$/);
+  if(m3 && MONTH_NAMES.includes(m3[1].toLowerCase())) return true;
+  // ISO datetime, e.g. "2026-05-03T00:00:00.000Z" or "2026-05-03 00:00:00"
+  if(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(s)) return true;
+  // A plain integer in a plausible Excel/Sheets serial-date range
+  // (roughly the years 1950–2100) — sheets sometimes export dates this way.
+  if(/^\d{5}$/.test(s)){
+    const n = Number(s);
+    if(n > 18000 && n < 73000) return true;
+  }
+  return false;
+}
+
+function normAssetWord(raw){
+  const s = raw.trim();
+  const low = s.toLowerCase().replace(/[\s._\/-]+/g, ''); // squash spaces/dots/slashes for matching
+  if(low === 'nr' || low === 'notrequired' || low === 'norequest' || low === 'na') return 'NR';
+  if(low === 'discarded' || low === 'discard') return 'Discarded';
+  return s; // unrecognized word — keep exactly as written so nothing is silently hidden
+}
+
+function assetApprovalStatus(r){
+  // Data-driven priority (confirmed from the sync diagnostic): the File
+  // Approval Date (AJ) column is where "Approved" actually gets recorded —
+  // sometimes as a real date, often as the literal word "Approved" — so it
+  // is checked first. The Request Date (AI) column mostly holds the reason
+  // nothing's approved yet (Pending / NR / Discarded / Not Active Yet), so
+  // it's the fallback when AJ is blank.
+  const fileRaw = (r['Asset File Approval Date']||'').trim();
+  const reqRaw = (r['Asset Approval Request Date']||'').trim();
+
+  function classify(raw){
+    if(!raw) return null;
+    if(looksLikeDate(raw)) return 'Approved';
+    const norm = normAssetWord(raw);
+    const lower = norm.toLowerCase();
+    if(lower === 'approved' || lower === 'approve') return 'Approved';
+    return norm;
+  }
+
+  const fromFile = classify(fileRaw);
+  if(fromFile) return fromFile;
+  const fromReq = classify(reqRaw);
+  if(fromReq) return fromReq;
+
+  // Both blank. If the site itself is already Active/Done, asset approval
+  // is something that should be happening now — that's a pending action,
+  // not "not applicable yet". Only a site that hasn't gone active is
+  // genuinely "Not Active Yet" for this purpose.
+  const active = (r['Active Status']||'').trim().toLowerCase();
+  if(active === 'done') return 'Pending';
+  return 'Not Active Yet';
+}
+
+function normPatType(v){
+  const t = (v||'').trim();
+  if(!t) return 'Unknown';
+  const s = t.toLowerCase();
+  if(s==='physical') return 'Physical';
+  if(s==='remote pat'||s==='rpat'||s==='remote') return 'Remote';
+  if(s==='na'||s==='n/a') return 'NA';
+  if(s==='nr') return 'NR';
+  if(s==='discarded') return 'Discarded';
+  return t;
+}
+
+function applyDataset(rows, sourceText, opts){
+  opts = opts || {};
+  RAW = rows;
+  dqIssues = 0;
+  RAW.forEach((r,i)=>{
+    r._rowIdx  = i;
+    r._install = normStatus(r['Installation Status']);
+    r._active  = normStatus(r['Active Status']);
+    r._pat     = normStatus(r['PAT Status']);
+    r._assetApproval = assetApprovalStatus(r);
+    r._patType = normPatType(r['PAT Type']);
+    if(r._install.startsWith('Date entered')) dqIssues++;
+  });
+
+  const preserved = {};
+  if(opts.preserveFilters){
+    filterIds.forEach(id=>{ preserved[id] = document.getElementById(id).value; });
+  }
+
+  fillSelect('fDistrict', uniqueSorted('District'));
+  fillSelect('fSiteType', uniqueSorted('Site Type (ISS/OB)'));
+  fillSelect('fProject', uniqueSorted('Project Type'));
+  fillSelect('fWorkType', uniqueSorted('Work Type'));
+  fillSelect('fTL', uniqueSorted('TL Name'));
+  fillSelect('fInstall', Array.from(new Set(RAW.map(r=>r._install))).sort());
+  fillSelect('fActive', Array.from(new Set(RAW.map(r=>r._active))).sort());
+  fillSelect('fPat', Array.from(new Set(RAW.map(r=>r._pat))).sort());
+  fillSelect('fPatType', Array.from(new Set(RAW.map(r=>r._patType))).sort());
+  const ASSET_APPROVAL_BASE = ['Approved','Pending','NR','Discarded','Not Active Yet'];
+  const assetApprovalValues = new Set([...ASSET_APPROVAL_BASE, ...RAW.map(r=>r._assetApproval)]);
+  fillSelect('fAssetApproval', Array.from(assetApprovalValues).sort());
+
+  if(opts.preserveFilters){
+    filterIds.forEach(id=>{
+      const el = document.getElementById(id);
+      const wanted = preserved[id];
+      if(wanted && Array.from(el.options).some(o=>o.value===wanted)) el.value = wanted;
+    });
+  } else {
+    document.getElementById('fSearch').value = '';
+    filterIds.forEach(id=>document.getElementById(id).value='');
+    sortKey = null; sortDir = 1; page = 0;
+  }
+
+  document.getElementById('totalCount').textContent = RAW.length.toLocaleString();
+  document.getElementById('sourceLabel').textContent = sourceText;
+
+  renderTable();
+}
+
+function currentFiltered(){
+  const search = document.getElementById('fSearch').value.trim().toLowerCase();
+  const dist = document.getElementById('fDistrict').value;
+  const siteType = document.getElementById('fSiteType').value;
+  const proj = document.getElementById('fProject').value;
+  const workType = document.getElementById('fWorkType').value;
+  const inst = document.getElementById('fInstall').value;
+  const act  = document.getElementById('fActive').value;
+  const pat  = document.getElementById('fPat').value;
+  const patType = document.getElementById('fPatType').value;
+  const assetAppr = document.getElementById('fAssetApproval').value;
+  const tl   = document.getElementById('fTL').value;
+
+  return RAW.filter(r=>{
+    if(dist && r['District']!==dist) return false;
+    if(siteType && r['Site Type (ISS/OB)']!==siteType) return false;
+    if(proj && r['Project Type']!==proj) return false;
+    if(workType && r['Work Type']!==workType) return false;
+    if(inst && r._install!==inst) return false;
+    if(act && r._active!==act) return false;
+    if(pat && r._pat!==pat) return false;
+    if(patType && r._patType!==patType) return false;
+    if(assetAppr && r._assetApproval!==assetAppr) return false;
+    if(tl && r['TL Name']!==tl) return false;
+    if(search){
+      const hay = ((r['Site name']||'')+' '+(r['Cell Name']||'')+' '+(r['ISS Site Code']||'')).toLowerCase();
+      if(!hay.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+let charts = {};
+function destroyCharts(){ Object.values(charts).forEach(c=>c && c.destroy()); charts={}; }
+
+function countBy(rows, field){
+  const m = new Map();
+  rows.forEach(r=>{
+    const v = (r[field]||'').trim() || 'Unknown';
+    m.set(v, (m.get(v)||0)+1);
+  });
+  return m;
+}
+
+function palette(n){
+  const base = ['#62A8E8','#F0A857','#3AD8BC','#F1746A','#A48CF2','#8BD17A','#E8B85B','#6FC4D9','#E092C9','#8FD9AE','#F0C674','#B7A3E8'];
+  const out = [];
+  for(let i=0;i<n;i++) out.push(base[i%base.length]);
+  return out;
+}
+
+function withPct(entries){
+  const total = entries.reduce((s,e)=>s+e[1],0);
+  return entries.map(e=>{
+    const pct = total ? Math.round(e[1]/total*100) : 0;
+    return `${e[0]} (${pct}%)`;
+  });
+}
+
+function donutOptions(){
+  return { responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{position:'right', labels:{boxWidth:10, font:{family:'IBM Plex Mono', size:10.5}}},
+      tooltip:{ callbacks:{ label:(ctx)=>{
+        const total = ctx.dataset.data.reduce((s,v)=>s+v,0);
+        const pct = total ? Math.round(ctx.parsed/total*100) : 0;
+        return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+      }}}
+    }
+  };
+}
+
+function renderCharts(rows){
+  destroyCharts();
+
+  // district bar
+  const distMap = countBy(rows, 'District');
+  const distEntries = Array.from(distMap.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.district = new Chart(document.getElementById('chartDistrict'), {
+    type:'bar',
+    data:{ labels:distEntries.map(e=>e[0]), datasets:[{ data:distEntries.map(e=>e[1]), backgroundColor:'#62A8E8', borderRadius:2, maxBarThickness:26 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{display:false}, ticks:{font:{family:'IBM Plex Mono', size:10.5}}}, y:{grid:{color:'rgba(232,237,244,0.07)'}, ticks:{font:{family:'IBM Plex Mono', size:10.5}}} } }
+  });
+
+  // project type top 10
+  const projMap = countBy(rows, 'Project Type');
+  const projEntries = Array.from(projMap.entries()).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  charts.project = new Chart(document.getElementById('chartProject'), {
+    type:'bar',
+    data:{ labels:projEntries.map(e=>e[0].length>26?e[0].slice(0,25)+'…':e[0]), datasets:[{ data:projEntries.map(e=>e[1]), backgroundColor:'#F0A857', borderRadius:2 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(232,237,244,0.07)'}, ticks:{font:{family:'IBM Plex Mono', size:10}}}, y:{grid:{display:false}, ticks:{font:{family:'IBM Plex Mono', size:10}}} } }
+  });
+
+  // install donut
+  const instMap = countBy(rows.map(r=>({_f:r._install})), '_f');
+  const instEntries = Array.from(instMap.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.install = new Chart(document.getElementById('chartInstall'), {
+    type:'doughnut',
+    data:{ labels:withPct(instEntries), datasets:[{ data:instEntries.map(e=>e[1]), backgroundColor:palette(instEntries.length), borderColor:'#131D2C', borderWidth:2 }]},
+    options: donutOptions()
+  });
+
+  // active donut
+  const actMap = countBy(rows.map(r=>({_f:r._active})), '_f');
+  const actEntries = Array.from(actMap.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.active = new Chart(document.getElementById('chartActive'), {
+    type:'doughnut',
+    data:{ labels:withPct(actEntries), datasets:[{ data:actEntries.map(e=>e[1]), backgroundColor:palette(actEntries.length), borderColor:'#131D2C', borderWidth:2 }]},
+    options: donutOptions()
+  });
+
+  // PAT status donut
+  const patMap = countBy(rows.map(r=>({_f:r._pat})), '_f');
+  const patEntries = Array.from(patMap.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.pat = new Chart(document.getElementById('chartPat'), {
+    type:'doughnut',
+    data:{ labels:withPct(patEntries), datasets:[{ data:patEntries.map(e=>e[1]), backgroundColor:palette(patEntries.length), borderColor:'#131D2C', borderWidth:2 }]},
+    options: donutOptions()
+  });
+
+  // PAT type donut (Physical / Remote monitoring)
+  const patTypeMap = countBy(rows.map(r=>({_f:r._patType})), '_f');
+  const patTypeEntries = Array.from(patTypeMap.entries()).sort((a,b)=>b[1]-a[1]);
+  charts.patType = new Chart(document.getElementById('chartPatType'), {
+    type:'doughnut',
+    data:{ labels:withPct(patTypeEntries), datasets:[{ data:patTypeEntries.map(e=>e[1]), backgroundColor:palette(patTypeEntries.length), borderColor:'#131D2C', borderWidth:2 }]},
+    options: donutOptions()
+  });
+}
+
+function renderKPIs(rows){
+  const total = rows.length;
+  const doneInstall = rows.filter(r=>r._install==='Done').length;
+  const doneActive = rows.filter(r=>r._active==='Done').length;
+  const patRequested = rows.filter(r=>looksLikeDate(r['PAT Date'])).length;
+  const patDateNonBlank = rows.filter(r=>(r['PAT Date']||'').trim()!=='').length;
+  if(patDateNonBlank > 0 && patRequested === 0){
+    const samples = [];
+    for(const r of rows){
+      const v = (r['PAT Date']||'').trim();
+      if(v && !samples.includes(v)){ samples.push(v); if(samples.length>=6) break; }
+    }
+    patDateDiagnostic = `PAT Date has ${patDateNonBlank} non-blank value(s) but none look like a date — example raw values: ${samples.map(s=>'"'+s+'"').join(', ')}`;
+  } else {
+    patDateDiagnostic = '';
+  }
+  const patAccepted = rows.filter(r=>r._pat==='Accepted'||r._pat==='Conditionally Accepted').length;
+  const patPending = rows.filter(r=>r._pat==='Pending').length;
+  const installPending = rows.filter(r=>r._install==='Pending').length;
+  const activePending = rows.filter(r=>r._active==='Pending').length;
+  const physicalPat = rows.filter(r=>r._patType==='Physical').length;
+  const remotePat = rows.filter(r=>r._patType==='Remote').length;
+  const totalSiteCount = rows.filter(r=>(r['Site Count']||'').trim()==='1').length;
+  const assetPending = rows.filter(r=>r._assetApproval==='Pending').length;
+  const totalAssetApproved = rows.filter(r=>{
+    const raw = (r['Asset File Approval Date']||'').trim();
+    if(!raw) return false;
+    if(looksLikeDate(raw)) return true;
+    const low = normAssetWord(raw).toLowerCase();
+    return low === 'approved' || low === 'approve';
+  }).length;
+
+  const pct = (n)=> total? Math.round(n/total*100) : 0;
+
+  const kpis = [
+    {cls:'k-total', lbl:'Total sites in view', val:`${total.toLocaleString()} / ${totalSiteCount.toLocaleString()}`, sub:`cells / sites${dqIssues ? ` · ${dqIssues} date-in-status rows` : ''}`},
+    {cls:'k-install', lbl:'Installation done', val:`${pct(doneInstall)}%`, sub:`${doneInstall.toLocaleString()} of ${total.toLocaleString()}`},
+    {cls:'k-installpending', lbl:'Installation pending', val:installPending.toLocaleString(), sub:`${pct(installPending)}% of view`},
+    {cls:'k-active', lbl:'Active / on-air', val:`${pct(doneActive)}%`, sub:`${doneActive.toLocaleString()} of ${total.toLocaleString()}`},
+    {cls:'k-activepending', lbl:'Active pending', val:activePending.toLocaleString(), sub:`${pct(activePending)}% of view`},
+    {cls:'k-asset', lbl:'Asset approval pending', val:assetPending.toLocaleString(), sub:`${pct(assetPending)}% of view`},
+    {cls:'k-assettotal', lbl:'Total asset approval', val:totalAssetApproved.toLocaleString(), sub:`${pct(totalAssetApproved)}% of view (AJ column)`},
+    {cls:'k-patreq', lbl:'PAT request qty', val:patRequested.toLocaleString(), sub:`${pct(patRequested)}% of view`},
+    {cls:'k-pat', lbl:'PAT status qty (Accepted + Cond.)', val:patAccepted.toLocaleString(), sub:`${pct(patAccepted)}% of view`},
+    {cls:'k-issue', lbl:'PAT request pending', val:patPending.toLocaleString(), sub:`${pct(patPending)}% of view`},
+    {cls:'k-physicalpat', lbl:'Physical PAT', val:physicalPat.toLocaleString(), sub:`${pct(physicalPat)}% of view`},
+    {cls:'k-remotepat', lbl:'Remote PAT', val:remotePat.toLocaleString(), sub:`${pct(remotePat)}% of view`},
+  ];
+  document.getElementById('kpiRow').innerHTML = kpis.map(k=>`
+    <div class="kpi ${k.cls}">
+      <div class="lbl">${k.lbl}</div>
+      <div class="val">${k.val}</div>
+      <div class="sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+function fmtBadge(norm){
+  return `<span class="badge ${badgeClass(norm)}">${norm}</span>`;
+}
+
+function renderTable(){
+  let rows = currentFiltered();
+  document.getElementById('filteredCount').textContent = rows.length.toLocaleString();
+
+  renderKPIs(rows);
+  try{ renderCharts(rows); }catch(e){ console.error('Chart rendering failed (dashboard will still work):', e); }
+
+  if(sortKey){
+    rows = rows.slice().sort((a,b)=>{
+      let av = a[sortKey]||'', bv = b[sortKey]||'';
+      if(sortKey.toLowerCase().includes('date')){
+        av = av || '0000'; bv = bv || '0000';
+      }
+      if(av<bv) return -1*sortDir;
+      if(av>bv) return 1*sortDir;
+      return 0;
+    });
+  }
+
+  const totalPages = Math.max(1, Math.ceil(rows.length/PAGE_SIZE));
+  if(page>=totalPages) page = totalPages-1;
+  if(page<0) page = 0;
+  const start = page*PAGE_SIZE;
+  const pageRows = rows.slice(start, start+PAGE_SIZE);
+
+  document.getElementById('tbody').innerHTML = pageRows.map(r=>{
+    const ed = (field, html) => `<td data-field="${field}" data-rowidx="${r._rowIdx}" class="editable-cell">${html}</td>`;
+    return `
+    <tr>
+      ${ed('Site name', r['Site name']||'')}
+      ${ed('Cell Name', r['Cell Name']||'')}
+      ${ed('District', r['District']||'')}
+      ${ed('Site Type (ISS/OB)', r['Site Type (ISS/OB)']||'')}
+      ${ed('ISS Site Code', r['ISS Site Code']||'')}
+      ${ed('Project Type', `<span title="${r['Project Type']||''}">${(r['Project Type']||'').length>28?(r['Project Type']||'').slice(0,27)+'…':(r['Project Type']||'')}</span>`)}
+      ${ed('Work Type', r['Work Type']||'')}
+      ${ed('Installation Status', fmtBadge(r._install))}
+      ${ed('Active Status', fmtBadge(r._active))}
+      <td>${fmtBadge(r._assetApproval)}</td>
+      ${ed('Asset Approval Request Date', r['Asset Approval Request Date']||'')}
+      ${ed('Asset File Approval Date', r['Asset File Approval Date']||'')}
+      ${ed('PAT Status', fmtBadge(r._pat))}
+      ${ed('PAT Type', fmtBadge(r._patType))}
+      ${ed('TL Name', r['TL Name']||'')}
+      ${ed('Actual Active Date', r['Actual Active Date']||'')}
+      ${ed('Remarks/Issues', r['Remarks/Issues'] ? `<span class="remark-flag">⚑</span> ${r['Remarks/Issues']}` : '')}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('rowRangeLabel').textContent = rows.length ? `— showing ${start+1}–${Math.min(start+PAGE_SIZE, rows.length)} of ${rows.length}` : '— no matching rows';
+  document.getElementById('pageLabel').textContent = `Page ${page+1} / ${totalPages}`;
+  document.getElementById('prevPage').disabled = page<=0;
+  document.getElementById('nextPage').disabled = page>=totalPages-1;
+
+  document.querySelectorAll('thead th').forEach(th=>{
+    th.classList.toggle('sort-active', th.dataset.key===sortKey);
+    const arrow = th.querySelector('.arrow');
+    if(arrow) arrow.remove();
+    if(th.dataset.key===sortKey){
+      const sp = document.createElement('span');
+      sp.className='arrow';
+      sp.textContent = sortDir===1 ? '▲':'▼';
+      th.appendChild(sp);
+    }
+  });
+}
+
+// ---------- events ----------
+['fSearch',...filterIds].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{ page=0; renderTable(); });
+  document.getElementById(id).addEventListener('change', ()=>{ page=0; renderTable(); });
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  document.getElementById('fSearch').value='';
+  filterIds.forEach(id=>document.getElementById(id).value='');
+  page=0; sortKey=null; sortDir=1;
+  renderTable();
+});
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const statusEl = document.getElementById('exportStatus');
+  statusEl.textContent = '';
+  if(typeof XLSX === 'undefined'){
+    statusEl.textContent = 'Spreadsheet library did not load — check your internet connection and reload the page.';
+    return;
+  }
+  try{
+    const rows = currentFiltered();
+    if(!rows.length){
+      statusEl.textContent = 'No rows match the current filters — nothing to export.';
+      return;
+    }
+    const exportRows = rows.map(r=>{
+      const rec = {};
+      REQUIRED_COLS.forEach(c=>{ rec[c] = r[c] || ''; });
+      return rec;
+    });
+    const ws = XLSX.utils.json_to_sheet(exportRows, {header: REQUIRED_COLS});
+    ws['!cols'] = REQUIRED_COLS.map(c => ({ wch: Math.max(12, Math.min(28, c.length + 4)) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Site Log');
+    const stamp = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `BTL_Activity_Export_${stamp}.xlsx`);
+  }catch(err){
+    statusEl.textContent = 'Export failed: ' + err.message;
+  }
+});
+document.querySelectorAll('thead th').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.key;
+    if(sortKey===key) sortDir*=-1; else { sortKey=key; sortDir=1; }
+    renderTable();
+  });
+});
+document.getElementById('prevPage').addEventListener('click', ()=>{ page--; renderTable(); });
+document.getElementById('nextPage').addEventListener('click', ()=>{ page++; renderTable(); });
+
+// ---------- inline cell editing — currently turned off ----------
+// (feature kept in code, just disabled — flip this back to `false` to re-enable)
+const CELL_EDITING_DISABLED = true;
+document.getElementById('tbody').addEventListener('dblclick', function(e){
+  if(CELL_EDITING_DISABLED) return;
+  if(!document.body.classList.contains('is-admin')) return;
+  const td = e.target.closest('td.editable-cell');
+  if(!td || td.querySelector('input')) return;
+
+  const rowIdx = Number(td.dataset.rowidx);
+  const field = td.dataset.field;
+  const row = RAW.find(r=>r._rowIdx===rowIdx);
+  if(!row) return;
+
+  const currentVal = row[field] || '';
+  const originalHtml = td.innerHTML;
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentVal;
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+
+  let settled = false;
+
+  async function commit(){
+    if(settled) return;
+    settled = true;
+    const newVal = input.value;
+    if(newVal === currentVal){
+      td.innerHTML = originalHtml;
+      return;
+    }
+    try{
+      const res = await fetch('/api/data', {
+        method:'PATCH', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ rowIndex: rowIdx, field, value: newVal })
+      });
+      if(res.status === 401){ window.location.href = '/login'; return; }
+      const data = await res.json();
+      if(!res.ok || !data.ok){
+        td.innerHTML = originalHtml;
+        td.title = data.error || 'Save failed';
+        td.classList.add('edit-error-flash');
+        setTimeout(()=>td.classList.remove('edit-error-flash'), 1500);
+        return;
+      }
+      row[field] = data.value;
+      row._install = normStatus(row['Installation Status']);
+      row._active  = normStatus(row['Active Status']);
+      row._pat     = normStatus(row['PAT Status']);
+      row._patType = normPatType(row['PAT Type']);
+      row._assetApproval = assetApprovalStatus(row);
+      renderTable();
+      const freshTd = document.querySelector(`td[data-rowidx="${rowIdx}"][data-field="${field}"]`);
+      if(freshTd){
+        if(data.sheetWriteback){
+          if(data.sheetWriteback.ok){
+            freshTd.title = 'Saved — also synced to Google Sheet';
+            freshTd.classList.add('edit-saved-flash');
+          } else {
+            freshTd.title = 'Saved here, but Google Sheet write failed: ' + data.sheetWriteback.error;
+            freshTd.classList.add('edit-partial-flash');
+          }
+        } else {
+          freshTd.classList.add('edit-saved-flash');
+        }
+        setTimeout(()=>freshTd.classList.remove('edit-saved-flash','edit-partial-flash'), 1500);
+      }
+    }catch(err){
+      td.innerHTML = originalHtml;
+      td.title = 'Could not reach the server: ' + err.message;
+      td.classList.add('edit-error-flash');
+      setTimeout(()=>td.classList.remove('edit-error-flash'), 1500);
+    }
+  }
+
+  input.addEventListener('keydown', (ev)=>{
+    if(ev.key === 'Enter'){ ev.preventDefault(); commit(); }
+    if(ev.key === 'Escape'){ settled = true; td.innerHTML = originalHtml; }
+  });
+  input.addEventListener('blur', commit);
+});
+
+function refreshFootNote(){
+  const editHint = (!CELL_EDITING_DISABLED && document.body.classList.contains('is-admin'))
+    ? 'Double-click any cell (except the "Asset appr." status badge) to edit it in place — saves to the server immediately, Enter to confirm, Esc to cancel. This edits the current snapshot only: the next Google Sheet sync or file upload replaces the whole dataset and will overwrite it unless the same fix is also made in the source sheet. '
+    : '';
+  const patHint = patDateDiagnostic
+    ? `<div style="color:var(--amber);margin-top:6px;">${patDateDiagnostic}</div>`
+    : '';
+  document.getElementById('footNote').innerHTML =
+    editHint +
+    `Status fields are normalized for grouping (case/whitespace only) — badges reflect the cleaned value, exact wording is preserved in tooltips/Remarks. ` +
+    (dqIssues ? `${dqIssues} rows have a date value sitting in the Installation Status column instead of Done/Pending — worth a data-entry fix at source.` : '') +
+    patHint;
+}
+
+const origRenderTable = renderTable;
+renderTable = function(){ origRenderTable(); refreshFootNote(); };
+
+// ---------- file upload: re-parse an updated workbook client-side ----------
+const REQUIRED_COLS = ['Site name','Cell Name','District','Assign Date','Site Type (ISS/OB)','ISS Site Code','GF/RT',
+  'Site Count','Project Type','Work Type','TL Name','Installation Start Date','Installation End Date',
+  'Installation Status','Plan Activation Date','Actual Active Date','Active Status',
+  'Dismantle Status','Dismantle Date','Asset Approval Request Date','Asset File Approval Date',
+  'PAT Type','PAT Status','PAT Date',
+  'Invoice Status','Remarks/Issues','GP Circle'];
+
+function excelDateToStr(v){
+  if(v===undefined||v===null||v==='') return '';
+  if(v instanceof Date && !isNaN(v)){
+    const y=v.getFullYear(), m=String(v.getMonth()+1).padStart(2,'0'), d=String(v.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(v).trim();
+}
+
+function setUploadStatus(msg, kind){
+  const el = document.getElementById('uploadStatus');
+  el.textContent = msg;
+  el.style.color = kind==='error' ? 'var(--red)' : kind==='ok' ? 'var(--teal)' : 'var(--ink-soft)';
+}
+
+document.getElementById('uploadBtn').addEventListener('click', function(){
+  document.getElementById('fileInput').click();
+});
+
+function normHeader(h){ return String(h).trim().toLowerCase().replace(/\s+/g,' '); }
+
+function colLetterToIndex(letter){
+  const s = String(letter||'').trim().toUpperCase();
+  if(!/^[A-Z]+$/.test(s)) return -1;
+  let n = 0;
+  for(let i=0;i<s.length;i++){ n = n*26 + (s.charCodeAt(i) - 64); }
+  return n - 1;
+}
+
+let columnOverrides = {};
+async function loadColumnOverrides(){
+  try{
+    const res = await fetch('/api/sync-config');
+    if(res.ok){
+      const cfg = await res.json();
+      columnOverrides = cfg.columnOverrides || {};
+    }
+  }catch(e){ /* non-admin or offline — fine, overrides just stay empty */ }
+}
+
+document.getElementById('fileInput').addEventListener('change', async function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  setUploadStatus('Reading ' + file.name + ' …', 'info');
+
+  if(typeof XLSX === 'undefined'){
+    setUploadStatus('Spreadsheet reader library did not load (likely blocked network/CDN in this preview). Download this HTML file and open it directly in your browser, then try upload again.', 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onerror = function(){
+    setUploadStatus('Could not read the file from disk. Please try again.', 'error');
+  };
+  reader.onload = async function(evt){
+    try{
+      const wb = XLSX.read(evt.target.result, {type:'array', cellDates:true});
+
+      // Scan every sheet, and within each sheet scan the first 20 rows,
+      // looking for the row that contains a "Site name" style header —
+      // handles files where the header isn't on row 1 (title rows, etc.)
+      let headerRowIdx = -1, headerRow = null, chosenSheetName = null, aoa = null;
+      const siteNameTargets = ['site name','sitename','site id'];
+
+      for(const sheetName of wb.SheetNames){
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        for(let i=0; i<Math.min(20, rows.length); i++){
+          const row = rows[i];
+          const idx = row.findIndex(cell => siteNameTargets.includes(normHeader(cell)));
+          if(idx !== -1){
+            headerRowIdx = i; headerRow = row; chosenSheetName = sheetName; aoa = rows;
+            break;
+          }
+        }
+        if(headerRowIdx !== -1) break;
+      }
+
+      if(headerRowIdx === -1){
+        const firstSheet = wb.SheetNames[0];
+        const preview = XLSX.utils.sheet_to_json(wb.Sheets[firstSheet], {header:1, defval:''})[0] || [];
+        setUploadStatus(
+          `Could not find a "Site name" column in any sheet (checked: ${wb.SheetNames.join(', ')}). ` +
+          `Row 1 of "${firstSheet}" reads: ${preview.slice(0,6).join(' | ')}${preview.length>6?' …':''}`,
+          'error'
+        );
+        return;
+      }
+
+      const headerMap = {};
+      headerRow.forEach((h, i) => { const n = normHeader(h); if(n) headerMap[n] = i; });
+      function resolveColIdx(colName){
+        const byName = headerMap[normHeader(colName)];
+        if(byName !== undefined) return byName;
+        if(columnOverrides[colName]){
+          const idx = colLetterToIndex(columnOverrides[colName]);
+          if(idx !== -1) return idx;
+        }
+        return undefined;
+      }
+      const missing = REQUIRED_COLS.filter(c => resolveColIdx(c) === undefined);
+      const siteColIdx = headerRow.findIndex(cell => siteNameTargets.includes(normHeader(cell)));
+
+      const dataRows = aoa.slice(headerRowIdx + 1);
+
+      const rows = dataRows
+        .filter(r => String((r[siteColIdx]!==undefined ? r[siteColIdx] : '')||'').trim() !== '')
+        .map(r=>{
+          const rec = {};
+          REQUIRED_COLS.forEach(c=>{
+            const colIdx = resolveColIdx(c);
+            rec[c] = (colIdx!==undefined && r[colIdx]!==undefined) ? excelDateToStr(r[colIdx]) : '';
+          });
+          return rec;
+        });
+
+      if(!rows.length){
+        setUploadStatus('Found the sheet but no rows with a Site name value.', 'error');
+        return;
+      }
+
+      setUploadStatus('Saving to server…', 'info');
+      const res = await fetch('/api/upload', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ rows })
+      });
+      if(res.status === 401){ window.location.href = '/login'; return; }
+      const saved = await res.json();
+      if(!res.ok || !saved.ok){
+        setUploadStatus('Server rejected the upload: ' + (saved.error||res.status), 'error');
+        return;
+      }
+
+      applyDataset(rows, `updated: ${file.name} — saved by ${saved.uploaded_by} at ${new Date(saved.uploaded_at).toLocaleString()}`);
+      lastLoadedAt = saved.uploaded_at;
+      let msg = `Loaded ${rows.length.toLocaleString()} rows from "${chosenSheetName}" in ${file.name} and saved to the server for everyone.`;
+      if(missing.length) msg += ` Note: column(s) not found and left blank — ${missing.join(', ')}.`;
+      setUploadStatus(msg, missing.length ? 'error' : 'ok');
+    }catch(err){
+      setUploadStatus('Could not parse that file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', async function(){
+  await fetch('/api/logout', { method:'POST' });
+  window.location.href = '/login';
+});
+
+async function boot(){
+  const meRes = await fetch('/api/me');
+  if(meRes.status === 401){ window.location.href = '/login'; return; }
+  const me = await meRes.json();
+  document.getElementById('whoami').textContent = me.username;
+  if(me.role === 'admin'){
+    document.getElementById('adminControls').style.display = 'flex';
+    document.body.classList.add('is-admin');
+    await loadColumnOverrides();
+  } else {
+    document.getElementById('viewOnlyBadge').style.display = 'inline-block';
+  }
+
+  const dataRes = await fetch('/api/data');
+  if(dataRes.status === 401){ window.location.href = '/login'; return; }
+  const payload = await dataRes.json();
+  if(!payload.rows || !payload.rows.length){
+    document.getElementById('sourceLabel').textContent = 'No data uploaded yet — use "Upload updated sheet" above.';
+    applyDataset([], 'no data yet');
+    return;
+  }
+  applyDataset(payload.rows, `saved by ${payload.uploaded_by} at ${new Date(payload.uploaded_at).toLocaleString()}`);
+  lastLoadedAt = payload.uploaded_at;
+  startAutoRefresh();
+}
+
+// ---------- live auto-refresh ----------
+// Polls the server periodically so a scheduled Google Sheets sync (or a
+// teammate's upload) shows up here without anyone hitting reload — while
+// keeping whatever filters/sort/page you currently have open.
+let lastLoadedAt = null;
+let autoRefreshTimer = null;
+const AUTO_REFRESH_SECONDS = 10;
+
+function startAutoRefresh(){
+  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(silentRefresh, AUTO_REFRESH_SECONDS * 1000);
+}
+
+async function silentRefresh(){
+  try{
+    const res = await fetch('/api/data');
+    if(!res.ok) return; // includes 401 — a background poll shouldn't force-redirect a live session
+    const payload = await res.json();
+    if(!payload.rows || !payload.rows.length) return;
+    if(payload.uploaded_at === lastLoadedAt) return; // nothing new
+    lastLoadedAt = payload.uploaded_at;
+    applyDataset(payload.rows, `saved by ${payload.uploaded_by} at ${new Date(payload.uploaded_at).toLocaleString()} · auto-refreshed`, {preserveFilters:true});
+  }catch(e){ /* silent — a failed background poll shouldn't interrupt anyone */ }
+}
+
+// ---------- Google Sheet sync panel ----------
+function setSyncStatus(msg, kind){
+  const el = document.getElementById('syncStatusMsg');
+  el.textContent = msg;
+  el.style.color = kind==='error' ? 'var(--red)' : kind==='ok' ? 'var(--teal)' : 'var(--ink-soft)';
+}
+
+function renderOverrideDiagnostics(ls){
+  const el = document.getElementById('overrideDiag');
+  if(!ls || !ls.overrideDiagnostics || !Object.keys(ls.overrideDiagnostics).length){
+    el.innerHTML = '';
+    return;
+  }
+  const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const blocks = Object.entries(ls.overrideDiagnostics).map(([colName, d])=>{
+    const flag = d.nonEmptyCount===0 ? ' style="color:var(--red);"' : '';
+    let html = `<div${flag}>${colName} (col ${d.letter}): ${d.nonEmptyCount} of ${ls.rowCount} rows have a value — header cell there reads "${esc(d.headerCellText)}"</div>`;
+    html += `<div style="padding-left:10px;color:var(--ink-soft);">${d.dateCount} of those are real dates (→ counted as Approved/Pending).</div>`;
+    if(d.nonDateValues && d.nonDateValues.length){
+      const valLines = d.nonDateValues.map(v => `<span style="display:inline-block;margin:1px 6px 1px 0;">"${esc(v.value)}" ×${v.count}</span>`).join('');
+      html += `<div style="padding-left:10px;color:var(--ink-soft);">Non-date values (every one, not truncated): ${valLines}</div>`;
+    } else {
+      html += `<div style="padding-left:10px;color:var(--ink-soft);">No non-date status words (like NR/Discarded) found in this column right now.</div>`;
+    }
+    return html;
+  });
+  el.innerHTML = blocks.join('');
+}
+
+async function loadSyncConfig(){
+  const res = await fetch('/api/sync-config');
+  if(res.status === 401){ window.location.href = '/login'; return; }
+  const cfg = await res.json();
+  document.getElementById('sheetUrlInput').value = cfg.googleSheetUrl || '';
+  document.getElementById('syncIntervalInput').value = cfg.syncIntervalMinutes || 15;
+  const overridesText = Object.entries(cfg.columnOverrides || {})
+    .map(([name, letter]) => `${name} = ${letter}`)
+    .join('\n');
+  document.getElementById('overridesInput').value = overridesText;
+  columnOverrides = cfg.columnOverrides || {};
+  if(cfg.configured && cfg.lastSync){
+    const ls = cfg.lastSync;
+    if(ls.status === 'ok'){
+      setSyncStatus(`Last synced ${new Date(ls.at).toLocaleString()} — ${ls.rowCount} rows.`, 'ok');
+      renderOverrideDiagnostics(ls);
+    } else if(ls.status === 'error'){
+      setSyncStatus(`Last sync failed (${new Date(ls.at).toLocaleString()}): ${ls.error}`, 'error');
+    } else {
+      setSyncStatus('Not synced yet.', 'info');
+    }
+  } else {
+    setSyncStatus('No Google Sheet connected yet.', 'info');
+  }
+}
+
+function setWritebackStatus(msg, kind){
+  const el = document.getElementById('writebackStatusMsg');
+  el.textContent = msg;
+  el.style.color = kind==='error' ? 'var(--red)' : kind==='ok' ? 'var(--teal)' : 'var(--ink-soft)';
+}
+
+async function loadServiceAccountStatus(){
+  try{
+    const res = await fetch('/api/service-account');
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    document.getElementById('writebackToggle').checked = !!data.writebackEnabled;
+    const el = document.getElementById('serviceAccountStatus');
+    if(data.configured){
+      el.innerHTML = `Connected as <b>${data.clientEmail}</b> — make sure this address is shared on the sheet as <b>Editor</b>.`;
+      el.style.color = 'var(--teal)';
+    } else {
+      el.textContent = 'Not set up yet — paste a service-account JSON key below.';
+      el.style.color = 'var(--ink-soft)';
+    }
+  }catch(e){
+    document.getElementById('serviceAccountStatus').textContent = 'Could not check status: ' + e.message;
+  }
+}
+
+document.getElementById('saveServiceAccountBtn').addEventListener('click', async function(){
+  const text = document.getElementById('serviceAccountInput').value.trim();
+  if(!text){ setWritebackStatus('Paste the service-account JSON first.', 'error'); return; }
+  setWritebackStatus('Saving…', 'info');
+  try{
+    const res = await fetch('/api/service-account', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ credentialsJson: text })
+    });
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      setWritebackStatus('Could not save: ' + data.error, 'error');
+      return;
+    }
+    setWritebackStatus(`Saved. Share the sheet with ${data.clientEmail} as Editor, then click "Test connection".`, 'ok');
+    document.getElementById('serviceAccountInput').value = '';
+    await loadServiceAccountStatus();
+  }catch(e){
+    setWritebackStatus('Could not reach the server: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('writebackToggle').addEventListener('change', async function(){
+  const enabled = this.checked;
+  try{
+    const res = await fetch('/api/service-account/enable', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ enabled })
+    });
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    setWritebackStatus(enabled ? 'Write-back enabled — edits here will also update the sheet.' : 'Write-back turned off — edits here stay local only.', 'ok');
+  }catch(e){
+    this.checked = !enabled;
+    setWritebackStatus('Could not reach the server: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('testWritebackBtn').addEventListener('click', async function(){
+  setWritebackStatus('Testing connection…', 'info');
+  try{
+    const res = await fetch('/api/service-account/test', { method:'POST' });
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      setWritebackStatus('Connection failed: ' + data.error, 'error');
+      return;
+    }
+    setWritebackStatus(`Connected — found tab "${data.sheetTitle}". Ready to write edits back.`, 'ok');
+  }catch(e){
+    setWritebackStatus('Could not reach the server: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('syncSettingsBtn').addEventListener('click', async function(){
+  const panel = document.getElementById('syncPanel');
+  const showing = panel.style.display !== 'none';
+  panel.style.display = showing ? 'none' : 'block';
+  if(!showing){
+    await loadSyncConfig();
+    await loadServiceAccountStatus();
+  }
+});
+
+function parseOverridesText(text){
+  const out = {};
+  text.split('\n').forEach(line=>{
+    const idx = line.indexOf('=');
+    if(idx === -1) return;
+    const name = line.slice(0, idx).trim();
+    const letter = line.slice(idx+1).trim();
+    if(name && letter) out[name] = letter;
+  });
+  return out;
+}
+
+document.getElementById('saveSyncBtn').addEventListener('click', async function(){
+  const url = document.getElementById('sheetUrlInput').value.trim();
+  const minutes = Number(document.getElementById('syncIntervalInput').value) || 15;
+  const overrides = parseOverridesText(document.getElementById('overridesInput').value);
+  if(!url){ setSyncStatus('Paste the Google Sheet link first.', 'error'); return; }
+  setSyncStatus('Saving and syncing…', 'info');
+  try{
+    const res = await fetch('/api/sync-config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ googleSheetUrl: url, syncIntervalMinutes: minutes, columnOverrides: overrides })
+    });
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    columnOverrides = (data.config && data.config.columnOverrides) || overrides;
+    if(!res.ok || !data.ok){
+      setSyncStatus('Saved, but the first sync failed: ' + (data.lastSync ? data.lastSync.error : data.error), 'error');
+      return;
+    }
+    setSyncStatus(`Synced — ${data.lastSync.rowCount} rows loaded.`, 'ok');
+    renderOverrideDiagnostics(data.lastSync);
+    const dataRes = await fetch('/api/data');
+    const payload = await dataRes.json();
+    applyDataset(payload.rows, `saved by ${payload.uploaded_by} at ${new Date(payload.uploaded_at).toLocaleString()}`);
+    lastLoadedAt = payload.uploaded_at;
+  }catch(e){
+    setSyncStatus('Could not reach the server: ' + e.message, 'error');
+  }
+});
+
+document.getElementById('syncNowBtn').addEventListener('click', async function(){
+  setSyncStatus('Syncing…', 'info');
+  try{
+    const res = await fetch('/api/sync-now', { method:'POST' });
+    if(res.status === 401){ window.location.href = '/login'; return; }
+    const data = await res.json();
+    if(!res.ok || !data.ok){
+      setSyncStatus('Sync failed: ' + (data.lastSync ? data.lastSync.error : data.error), 'error');
+      return;
+    }
+    setSyncStatus(`Synced — ${data.lastSync.rowCount} rows loaded.`, 'ok');
+    renderOverrideDiagnostics(data.lastSync);
+    const dataRes = await fetch('/api/data');
+    const payload = await dataRes.json();
+    applyDataset(payload.rows, `saved by ${payload.uploaded_by} at ${new Date(payload.uploaded_at).toLocaleString()}`);
+    lastLoadedAt = payload.uploaded_at;
+  }catch(e){
+    setSyncStatus('Could not reach the server: ' + e.message, 'error');
+  }
+});
+
+boot();
+</script>
+</body>
+</html>
